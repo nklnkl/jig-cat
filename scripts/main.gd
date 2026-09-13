@@ -75,13 +75,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	if reference.visible:
 		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		var board_point: Vector2 = pieces_root.make_input_local(event).position
 		if event.pressed:
-			grab_at(pieces_root.get_local_mouse_position())
+			grab_at(board_point)
 		else:
-			drag_to(pieces_root.get_local_mouse_position())  # apply the final pointer position even without a motion event
+			drag_to(board_point)  # apply the final pointer position even without a motion event
 			_release()
 	elif event is InputEventMouseMotion and dragging != null:
-		drag_to(pieces_root.get_local_mouse_position())
+		drag_to(pieces_root.make_input_local(event).position)
 
 
 ## Topmost piece whose opaque pixels cover the point (board coordinates).

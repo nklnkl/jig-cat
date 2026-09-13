@@ -11,6 +11,7 @@ position = Vector2(0, 160)
 [node name="Backdrop" type="ColorRect" parent="Board"]
 offset_right = 2048.0
 offset_bottom = 2048.0
+mouse_filter = 2
 color = Color(0.16, 0.15, 0.18, 1)
 
 [node name="Background" type="Sprite2D" parent="Board"]

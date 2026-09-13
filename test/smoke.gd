@@ -85,6 +85,36 @@ func _initialize() -> void:
 	main.finish()
 	_check(main.score_label.text == "Score: 29% (31/108)", "finish writes the score label (got '%s')" % main.score_label.text)
 
+	print("real input path (events pushed through the viewport)")
+	main.shuffle()
+	var tp: Piece = main.pieces[3]
+	main.pieces_root.move_child(tp, -1)
+	var tp_start: Vector2 = tp.position
+	var canvas_pt: Vector2 = tp.position + _first_opaque(tp) + main.get_node("Board").position
+	var down := InputEventMouseButton.new()
+	down.button_index = MOUSE_BUTTON_LEFT
+	down.pressed = true
+	down.position = canvas_pt
+	down.global_position = canvas_pt
+	root.push_input(down, true)
+	await process_frame
+	_check(main.dragging == tp, "a press on the board reaches the drag code (nothing swallows board input)")
+	var mv := InputEventMouseMotion.new()
+	mv.position = canvas_pt + Vector2(100, 50)
+	mv.global_position = mv.position
+	mv.button_mask = MOUSE_BUTTON_MASK_LEFT
+	root.push_input(mv, true)
+	await process_frame
+	_check(tp.position.distance_to(tp_start + Vector2(100, 50)) < 1.0, "motion drags the piece (got %s from %s)" % [str(tp.position), str(tp_start)])
+	var up := InputEventMouseButton.new()
+	up.button_index = MOUSE_BUTTON_LEFT
+	up.pressed = false
+	up.position = mv.position
+	up.global_position = mv.position
+	root.push_input(up, true)
+	await process_frame
+	_check(main.dragging == null, "release through the viewport ends the drag")
+
 	print("toggle")
 	main.set_show_original(true)
 	_check(main.reference.visible and not main.pieces_root.visible, "show original hides pieces")

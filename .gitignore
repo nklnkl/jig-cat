@@ -1,0 +1,19 @@
+# Godot
+.godot/
+*.import.tmp
+export/
+*.tmp
+
+# Segmentation tool caches (regenerate with tools/segment/README.md)
+tools/segment/models/
+tools/segment/*.npz
+tools/segment/run*/
+tools/segment/z*/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+Thumbs.db
+.DS_Store

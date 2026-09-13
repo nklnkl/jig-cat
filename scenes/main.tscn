@@ -20,6 +20,16 @@ color = Color(0.16, 0.15, 0.18, 1)
 
 [node name="Pieces" type="Node2D" parent="Board"]
 
+[node name="Tray" type="ColorRect" parent="."]
+clip_contents = true
+offset_top = 2208.0
+offset_right = 2048.0
+offset_bottom = 2568.0
+mouse_filter = 2
+color = Color(0.93, 0.88, 0.78, 1)
+
+[node name="Content" type="Node2D" parent="Tray"]
+
 [node name="UI" type="CanvasLayer" parent="."]
 
 [node name="Bar" type="PanelContainer" parent="UI"]

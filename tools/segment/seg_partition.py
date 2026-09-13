@@ -5,6 +5,7 @@ from scipy import ndimage as ndi
 IMG, NPZ, OUTDIR = sys.argv[1], sys.argv[2], sys.argv[3]
 MIN_AREA, MAX_AREA = int(sys.argv[4]), int(sys.argv[5])
 OVERLAP_REJECT = float(sys.argv[6])  # reject a mask if this fraction of it is already claimed
+BG_MAX_VALUE, BG_MAX_SAT = 170, 100  # HSV limits for 'true background' pixels
 EDITS = sys.argv[7] if len(sys.argv) > 7 else None
 os.makedirs(OUTDIR, exist_ok=True)
 
@@ -139,18 +140,24 @@ kept = [kept[k] for k in order]
 
 np.save(os.path.join(OUTDIR, "label.npy"), label)
 
-# --- cat-only alpha: pieces keep just the cat pixels; leftover background is a board layer
+# --- cat-only alpha: pieces keep their cat pixels; only true dark background is a board layer
 catmask = np.zeros((H, W), bool)
 for i in kept:
     catmask |= segs[i]
 for i in absorb_idx:
     catmask |= segs[i]
-k5 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-catmask = cv2.morphologyEx(catmask.astype(np.uint8), cv2.MORPH_CLOSE, k5)
-catmask = cv2.morphologyEx(catmask, cv2.MORPH_OPEN, k5).astype(bool)
+k7 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+catmask = cv2.morphologyEx(catmask.astype(np.uint8), cv2.MORPH_CLOSE, k7)
+catmask = cv2.morphologyEx(catmask, cv2.MORPH_OPEN, k7).astype(bool)
+# true background = outside every cat mask AND dark/unsaturated (the gap colour between cats);
+# bright or colourful leftovers (fur the masks missed, bows, paws) stay with the piece that owns them
+hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+dark = (hsv[..., 2] <= BG_MAX_VALUE) & (hsv[..., 1] <= BG_MAX_SAT)
+bgmask = (~catmask) & dark
+bgmask = cv2.morphologyEx(bgmask.astype(np.uint8), cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))).astype(bool)
 piece_alpha = np.zeros((H, W), bool)
 for k in range(label.max() + 1):
-    m = ndi.binary_fill_holes((label == k) & catmask)
+    m = ndi.binary_fill_holes((label == k) & ~bgmask)
     piece_alpha |= m
     label = np.where(m, k, label)
 alpha_of = lambda k: ((label == k) & piece_alpha)

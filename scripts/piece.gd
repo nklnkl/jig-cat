@@ -4,6 +4,7 @@ extends Sprite2D
 ## answer pixel-accurate "is this point on me?" queries via its alpha bitmap.
 
 var id: int = -1
+var in_tray := true
 var true_position := Vector2.ZERO
 var size := Vector2.ZERO
 var _bitmap := BitMap.new()
@@ -22,7 +23,7 @@ func setup(entry: Dictionary, tex: Texture2D) -> void:
 func contains_local_point(local: Vector2) -> bool:
 	if local.x < 0.0 or local.y < 0.0 or local.x >= size.x or local.y >= size.y:
 		return false
-	return _bitmap.get_bit(int(local.x), int(local.y))
+	return _bitmap.get_bit(floori(local.x), floori(local.y))
 
 
 func distance_from_home() -> float:

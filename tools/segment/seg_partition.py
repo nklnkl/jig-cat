@@ -138,6 +138,25 @@ label = lut[label]
 kept = [kept[k] for k in order]
 
 np.save(os.path.join(OUTDIR, "label.npy"), label)
+
+# --- cat-only alpha: pieces keep just the cat pixels; leftover background is a board layer
+catmask = np.zeros((H, W), bool)
+for i in kept:
+    catmask |= segs[i]
+for i in absorb_idx:
+    catmask |= segs[i]
+k5 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+catmask = cv2.morphologyEx(catmask.astype(np.uint8), cv2.MORPH_CLOSE, k5)
+catmask = cv2.morphologyEx(catmask, cv2.MORPH_OPEN, k5).astype(bool)
+piece_alpha = np.zeros((H, W), bool)
+for k in range(label.max() + 1):
+    m = ndi.binary_fill_holes((label == k) & catmask)
+    piece_alpha |= m
+    label = np.where(m, k, label)
+alpha_of = lambda k: ((label == k) & piece_alpha)
+bg = np.dstack([img, ((~piece_alpha) * 255).astype(np.uint8)])
+cv2.imwrite(os.path.join(OUTDIR, "background.png"), cv2.cvtColor(bg, cv2.COLOR_RGBA2BGRA))
+print("background px", int((~piece_alpha).sum()), "of", H * W)
 for i, tgt in absorbed:
     vals, cnts = np.unique(label[segs[i]], return_counts=True)
     comp = sorted(zip(cnts.tolist(), vals.tolist()), reverse=True)[:3]
@@ -148,7 +167,7 @@ colors = rng.integers(60, 255, (len(kept), 3))
 overlay = img.copy()
 edges = np.zeros((H, W), bool)
 for k in range(len(kept)):
-    m = label == k
+    m = alpha_of(k)
     ys, xs = np.where(m)
     y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
     rgba = np.dstack([img[y0:y1, x0:x1], (m[y0:y1, x0:x1] * 255).astype(np.uint8)])
@@ -167,7 +186,7 @@ cv2.imwrite(os.path.join(OUTDIR, "overlay.png"), cv2.cvtColor(overlay, cv2.COLOR
 for qi, (qy, qx) in enumerate([(0, 0), (0, 1), (1, 0), (1, 1)]):
     crop = overlay[qy * H // 2:(qy + 1) * H // 2, qx * W // 2:(qx + 1) * W // 2]
     cv2.imwrite(os.path.join(OUTDIR, f"overlay_q{qi}.png"), cv2.cvtColor(crop, cv2.COLOR_RGB2BGR))
-json.dump({"image": os.path.basename(IMG), "width": W, "height": H, "pieces": manifest},
+json.dump({"image": os.path.basename(IMG), "background": "background.png", "width": W, "height": H, "pieces": manifest},
           open(os.path.join(OUTDIR, "manifest.json"), "w"), indent=1)
 areas = sorted(e["area"] for e in manifest)
 print("pieces", len(manifest), "area min/med/max", areas[0], areas[len(areas) // 2], areas[-1])
